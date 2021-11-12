@@ -24,5 +24,3 @@ add_custom_target(module ALL DEPENDS ${OUTPUT_FILE})
 add_executable(dmy_tgt ${SOURCES})
 target_include_directories(dmy_tgt PRIVATE ${KERNELHEADERS_INCLUDE_DIRS})
 # -------
-
-

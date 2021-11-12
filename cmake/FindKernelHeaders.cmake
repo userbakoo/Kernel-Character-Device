@@ -1,3 +1,4 @@
+
 execute_process(
         COMMAND uname -r
         OUTPUT_VARIABLE KERNEL_RELEASE
@@ -19,5 +20,5 @@ if (KERNELHEADERS_DIR)
 else (KERNELHEADERS_DIR)
     set(KERNELHEADERS_FOUND 0 CACHE STRING "Set to 1 if kernel headers were found")
 endif (KERNELHEADERS_DIR)
-
+message(STATUS "Kernel headers: ${KERNELHEADERS_DIR}")
 mark_as_advanced(KERNELHEADERS_FOUND)
