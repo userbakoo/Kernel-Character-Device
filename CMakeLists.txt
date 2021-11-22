@@ -10,7 +10,7 @@ include_directories(${KERNELHEADERS_INCLUDE_DIRS})
 message(STATUS "Kernel directories: ${KERNELHEADERS_INCLUDE_DIRS}")
 add_definitions(-D__KERNEL__ -DMODULE)
 set(OUTPUT_FILE my_module.ko)
-set(SOURCES my_module.c)
+set(SOURCES my_module.c data.h)
 set(KBUILD_COMMAND $(MAKE) -C ${KERNELHEADERS_DIR} modules M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR})
 FILE(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/Kbuild "obj-m := my_module.o")
 add_custom_command(OUTPUT ${OUTPUT_FILE}

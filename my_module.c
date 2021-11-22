@@ -2,13 +2,13 @@
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <asm/uaccess.h>
-#include <asm/ucontext.h>
 #include <linux/device.h>
 #include <linux/cdev.h>
 #include <linux/timekeeping.h>
 #include <linux/slab.h>
-#include <asm/fpu/api.h>
 #include <linux/math.h>
+
+#include "data.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bartosz Chwała");
@@ -23,784 +23,6 @@ static int release_MYDEV(struct inode *, struct file *);
 static ssize_t read_MYDEV(struct file *, char *, size_t, loff_t *);
 static ssize_t write_MYDEV(struct file *, const char *, size_t, loff_t *);
 
-
-int32_t gaussian_lookup_table_sqrt[256] = {
-        0,
-        3329,
-        3113,
-        2980,
-        2882,
-        2804,
-        2738,
-        2681,
-        2631,
-        2586,
-        2545,
-        2507,
-        2472,
-        2439,
-        2409,
-        2380,
-        2353,
-        2327,
-        2302,
-        2278,
-        2256,
-        2234,
-        2213,
-        2193,
-        2174,
-        2155,
-        2136,
-        2119,
-        2101,
-        2085,
-        2068,
-        2052,
-        2037,
-        2022,
-        2007,
-        1992,
-        1978,
-        1964,
-        1951,
-        1937,
-        1924,
-        1911,
-        1899,
-        1886,
-        1874,
-        1862,
-        1850,
-        1839,
-        1827,
-        1816,
-        1805,
-        1794,
-        1783,
-        1772,
-        1761,
-        1751,
-        1741,
-        1731,
-        1720,
-        1710,
-        1701,
-        1691,
-        1681,
-        1672,
-        1662,
-        1653,
-        1644,
-        1634,
-        1625,
-        1616,
-        1607,
-        1599,
-        1590,
-        1581,
-        1573,
-        1564,
-        1555,
-        1547,
-        1539,
-        1530,
-        1522,
-        1514,
-        1506,
-        1498,
-        1490,
-        1482,
-        1474,
-        1466,
-        1458,
-        1450,
-        1443,
-        1435,
-        1427,
-        1420,
-        1412,
-        1405,
-        1397,
-        1390,
-        1382,
-        1375,
-        1368,
-        1360,
-        1353,
-        1346,
-        1339,
-        1332,
-        1325,
-        1317,
-        1310,
-        1303,
-        1296,
-        1289,
-        1282,
-        1275,
-        1268,
-        1262,
-        1255,
-        1248,
-        1241,
-        1234,
-        1227,
-        1221,
-        1214,
-        1207,
-        1200,
-        1194,
-        1187,
-        1180,
-        1174,
-        1167,
-        1160,
-        1154,
-        1147,
-        1140,
-        1134,
-        1127,
-        1121,
-        1114,
-        1108,
-        1101,
-        1095,
-        1088,
-        1082,
-        1075,
-        1069,
-        1062,
-        1056,
-        1049,
-        1043,
-        1036,
-        1030,
-        1023,
-        1017,
-        1010,
-        1004,
-        997,
-        991,
-        984,
-        978,
-        971,
-        965,
-        959,
-        952,
-        946,
-        939,
-        933,
-        926,
-        920,
-        913,
-        907,
-        900,
-        893,
-        887,
-        880,
-        874,
-        867,
-        861,
-        854,
-        847,
-        841,
-        834,
-        827,
-        821,
-        814,
-        807,
-        801,
-        794,
-        787,
-        780,
-        773,
-        767,
-        760,
-        753,
-        746,
-        739,
-        732,
-        725,
-        718,
-        711,
-        704,
-        697,
-        689,
-        682,
-        675,
-        668,
-        660,
-        653,
-        645,
-        638,
-        630,
-        623,
-        615,
-        607,
-        599,
-        592,
-        584,
-        576,
-        568,
-        559,
-        551,
-        543,
-        534,
-        526,
-        517,
-        509,
-        500,
-        491,
-        482,
-        473,
-        463,
-        454,
-        444,
-        434,
-        424,
-        414,
-        404,
-        393,
-        382,
-        371,
-        359,
-        348,
-        336,
-        323,
-        310,
-        296,
-        282,
-        268,
-        252,
-        235,
-        218,
-        199,
-        177,
-        153,
-        125,
-        88,
-        0
-};
-
-int32_t gaussian_lookup_table_sin[256] = {
-        0,
-        24,
-        49,
-        73,
-        98,
-        122,
-        147,
-        171,
-        195,
-        219,
-        243,
-        267,
-        291,
-        314,
-        338,
-        361,
-        384,
-        406,
-        429,
-        451,
-        473,
-        494,
-        515,
-        536,
-        557,
-        577,
-        597,
-        617,
-        636,
-        655,
-        673,
-        691,
-        709,
-        726,
-        743,
-        759,
-        775,
-        790,
-        805,
-        819,
-        833,
-        846,
-        859,
-        872,
-        883,
-        895,
-        905,
-        916,
-        925,
-        934,
-        943,
-        951,
-        958,
-        965,
-        971,
-        976,
-        981,
-        986,
-        989,
-        993,
-        995,
-        997,
-        999,
-        999,
-        999,
-        999,
-        998,
-        996,
-        994,
-        991,
-        988,
-        984,
-        979,
-        974,
-        968,
-        961,
-        954,
-        947,
-        938,
-        930,
-        920,
-        911,
-        900,
-        889,
-        878,
-        866,
-        853,
-        840,
-        826,
-        812,
-        798,
-        782,
-        767,
-        751,
-        734,
-        717,
-        700,
-        682,
-        664,
-        645,
-        626,
-        607,
-        587,
-        567,
-        547,
-        526,
-        505,
-        483,
-        462,
-        440,
-        417,
-        395,
-        372,
-        349,
-        326,
-        303,
-        279,
-        255,
-        231,
-        207,
-        183,
-        159,
-        135,
-        110,
-        86,
-        61,
-        36,
-        12,
-        -12,
-        -36,
-        -61,
-        -86,
-        -110,
-        -135,
-        -159,
-        -183,
-        -207,
-        -231,
-        -255,
-        -279,
-        -303,
-        -326,
-        -349,
-        -372,
-        -395,
-        -417,
-        -440,
-        -462,
-        -483,
-        -505,
-        -526,
-        -547,
-        -567,
-        -587,
-        -607,
-        -626,
-        -645,
-        -664,
-        -682,
-        -700,
-        -717,
-        -734,
-        -751,
-        -767,
-        -782,
-        -798,
-        -812,
-        -826,
-        -840,
-        -853,
-        -866,
-        -878,
-        -889,
-        -900,
-        -911,
-        -920,
-        -930,
-        -938,
-        -947,
-        -954,
-        -961,
-        -968,
-        -974,
-        -979,
-        -984,
-        -988,
-        -991,
-        -994,
-        -996,
-        -998,
-        -999,
-        -999,
-        -999,
-        -999,
-        -997,
-        -995,
-        -993,
-        -989,
-        -986,
-        -981,
-        -976,
-        -971,
-        -965,
-        -958,
-        -951,
-        -943,
-        -934,
-        -925,
-        -916,
-        -905,
-        -895,
-        -883,
-        -872,
-        -859,
-        -846,
-        -833,
-        -819,
-        -805,
-        -790,
-        -775,
-        -759,
-        -743,
-        -726,
-        -709,
-        -691,
-        -673,
-        -655,
-        -636,
-        -617,
-        -597,
-        -577,
-        -557,
-        -536,
-        -515,
-        -494,
-        -473,
-        -451,
-        -429,
-        -406,
-        -384,
-        -361,
-        -338,
-        -314,
-        -291,
-        -267,
-        -243,
-        -219,
-        -195,
-        -171,
-        -147,
-        -122,
-        -98,
-        -73,
-        -49,
-        -24,
-        0
-};
-
-int32_t gaussian_lookup_table_cos[256] = {
-        0,
-        999,
-        998,
-        997,
-        995,
-        992,
-        989,
-        985,
-        980,
-        975,
-        969,
-        963,
-        956,
-        949,
-        941,
-        932,
-        923,
-        913,
-        903,
-        892,
-        881,
-        869,
-        856,
-        843,
-        830,
-        816,
-        801,
-        786,
-        771,
-        755,
-        739,
-        722,
-        704,
-        687,
-        669,
-        650,
-        631,
-        612,
-        592,
-        572,
-        552,
-        531,
-        510,
-        489,
-        467,
-        445,
-        423,
-        401,
-        378,
-        355,
-        332,
-        309,
-        285,
-        261,
-        237,
-        213,
-        189,
-        165,
-        141,
-        116,
-        92,
-        67,
-        43,
-        18,
-        -6,
-        -30,
-        -55,
-        -79,
-        -104,
-        -128,
-        -153,
-        -177,
-        -201,
-        -225,
-        -249,
-        -273,
-        -297,
-        -320,
-        -343,
-        -366,
-        -389,
-        -412,
-        -434,
-        -456,
-        -478,
-        -499,
-        -521,
-        -542,
-        -562,
-        -582,
-        -602,
-        -622,
-        -641,
-        -659,
-        -678,
-        -696,
-        -713,
-        -730,
-        -747,
-        -763,
-        -779,
-        -794,
-        -809,
-        -823,
-        -836,
-        -850,
-        -862,
-        -875,
-        -886,
-        -897,
-        -908,
-        -918,
-        -927,
-        -936,
-        -945,
-        -952,
-        -960,
-        -966,
-        -972,
-        -978,
-        -982,
-        -987,
-        -990,
-        -993,
-        -996,
-        -998,
-        -999,
-        -999,
-        -999,
-        -999,
-        -998,
-        -996,
-        -993,
-        -990,
-        -987,
-        -982,
-        -978,
-        -972,
-        -966,
-        -960,
-        -952,
-        -945,
-        -936,
-        -927,
-        -918,
-        -908,
-        -897,
-        -886,
-        -875,
-        -862,
-        -850,
-        -836,
-        -823,
-        -809,
-        -794,
-        -779,
-        -763,
-        -747,
-        -730,
-        -713,
-        -696,
-        -678,
-        -659,
-        -641,
-        -622,
-        -602,
-        -582,
-        -562,
-        -542,
-        -521,
-        -500,
-        -478,
-        -456,
-        -434,
-        -412,
-        -389,
-        -366,
-        -343,
-        -320,
-        -297,
-        -273,
-        -249,
-        -225,
-        -201,
-        -177,
-        -153,
-        -128,
-        -104,
-        -79,
-        -55,
-        -30,
-        -6,
-        18,
-        43,
-        67,
-        92,
-        116,
-        141,
-        165,
-        189,
-        213,
-        237,
-        261,
-        285,
-        309,
-        332,
-        355,
-        378,
-        401,
-        423,
-        445,
-        467,
-        489,
-        510,
-        531,
-        552,
-        572,
-        592,
-        612,
-        631,
-        650,
-        669,
-        687,
-        704,
-        722,
-        739,
-        755,
-        771,
-        786,
-        801,
-        816,
-        830,
-        843,
-        856,
-        869,
-        881,
-        892,
-        903,
-        913,
-        923,
-        932,
-        941,
-        949,
-        956,
-        963,
-        969,
-        975,
-        980,
-        985,
-        989,
-        992,
-        995,
-        997,
-        998,
-        999,
-        1000
-};
-
 #define DEVICE_DEV_NAME "__prng_device" /* as it shows up in /dev/ etc. */
 #define DEVICE_CLASS_NAME DEVICE_DEV_NAME
 #define DEVICE_NAME_FORMAT DEVICE_DEV_NAME
@@ -812,8 +34,15 @@ int32_t gaussian_lookup_table_cos[256] = {
 #define STATE_BUF_LEN 4
 
 static int device_state = DEVICE_FREE;
-static uint32_t *prng_ptr;
 static uint32_t STATE_BUF[STATE_BUF_LEN];
+
+#define MODE_UNIVERSAL 0
+#define MODE_GAUSS 1
+
+static int generator_mode = MODE_UNIVERSAL;
+
+static long gauss_stddev = 1;
+static long gauss_mean = 0;
 
 /* For module_init */
 static dev_t dev;
@@ -859,71 +88,95 @@ uint64_t xoshiro128ss(uint32_t* state_ptr) {
 
 /* --       -- */
 
-//scaled = mean + stdDev * zScore
-
-
 static void get_gaussian(const uint8_t* uni_source, int32_t ** result, size_t length) {
+    int count_of_zeroes = 0;
     int32_t * helper_ptr = *result;
     size_t i = 0;
-    //printk(KERN_INFO "Buffer length: %zu \n", length);
-//    size_t j = 0;
-//    for(j = 0; j < length; j++) {
-//        printk(KERN_INFO "Buffer Value: %u \n", helper_ptr[j]);
-//    }
-    size_t to = length / (2 * sizeof(uint32_t));
-    printk(KERN_INFO "Iterating from 0 to :, %zu :: length %zu, size %lu\n", to, length, sizeof(uint32_t));
-    for(; i < to; ++i) {
-        printk(KERN_INFO "Iterating in for, i: %zu\n", i);
-        // For length == 16, which would be 4 int32_t:
-        // for(i=0; i < 2; i+=2) <= 2 iterations
-        // 0    0 1
-        // 1    2 3
-        // 2    4 5
-        // 3    6 7
-        // 4    8 9
-        uint8_t U1 = uni_source[2*i] % 255;         //
-        uint8_t U2 = uni_source[(2*i)+1] % 255;       // 1, 3
-        printk(KERN_INFO "Value from buffer: %u %u\n", U1, U2);
-
+    size_t to = length / (sizeof(uint32_t));
+    for(; i < to; i+=2) {
+        uint8_t U1 = uni_source[i] % 256;
+        uint8_t U2 = uni_source[i+1] % 256;
         int32_t Z1_lhs = gaussian_lookup_table_sqrt[U1];
         int32_t Z2_lhs = gaussian_lookup_table_sqrt[U1];
-        printk(KERN_INFO "Sqrt for that: %d %d\n", Z1_lhs, Z2_lhs);
-
         Z1_lhs *= gaussian_lookup_table_sin[(U2)];
-        printk(KERN_INFO "Sin: %d\n", gaussian_lookup_table_sin[(U2)]);
-        Z2_lhs *= gaussian_lookup_table_cos[(U2)];
-        printk(KERN_INFO "Sin: %d\n", gaussian_lookup_table_cos[(U2)]);
-        printk(KERN_INFO "SinCos for that: %d %d\n", Z1_lhs, Z2_lhs);
-        Z1_lhs = Z1_lhs / 100000;
-        Z2_lhs = Z1_lhs / 100000;
-        //if(Z1_lhs < 0) Z1_lhs *= -1;
-        //if(Z2_lhs < 0) Z2_lhs *= -1;
-        printk(KERN_INFO "Final: %d %d\n", Z1_lhs, Z2_lhs);
+        Z2_lhs *= gaussian_lookup_table_cos[(U2)]; // 400 000
+        Z1_lhs *= (int32_t) gauss_stddev;
+        Z2_lhs *= (int32_t) gauss_stddev;
+//        if( (Z1_lhs >= 0 && Z1_lhs < 500000)) {
+//            Z1_lhs-= 40000;
+//        } else if ((Z1_lhs < 0 &&  Z1_lhs > -500000)) {
+//            Z1_lhs+= (int) (int_sqrt(gauss_stddev)) * 40000;
+//        }
+//
+//        if( (Z2_lhs >= 0 && Z2_lhs < 500000)) {
+//            Z2_lhs-= 40000;
+//        } else if ((Z2_lhs < 0 &&  Z2_lhs > -500000)) {
+//            Z2_lhs+= 40000;
+//        }
+        Z1_lhs += (Z1_lhs >= 0) ? 500000 : -500000;
+        Z2_lhs += (Z2_lhs >= 0) ? 500000 : -500000;
+        Z1_lhs /= 1000000;
+        Z2_lhs /= 1000000;
+        Z1_lhs += (int32_t) gauss_mean;
+        Z2_lhs += (int32_t) gauss_mean;
+
+//        if(Z1_lhs == 0 || Z2_lhs == 0) {
+//            printk(KERN_INFO "Retracing zero\n");
+//            printk(KERN_INFO "U1: %d, U2: %d\n", U1, U2);
+//            int32_t tZ1_lhs = gaussian_lookup_table_sqrt[U1];
+//            int32_t tZ2_lhs = gaussian_lookup_table_sqrt[U1];
+//            printk(KERN_INFO "Sqrt z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
+//            tZ1_lhs *= gaussian_lookup_table_sin[(U2)];
+//            tZ2_lhs *= gaussian_lookup_table_cos[(U2)];
+//            printk(KERN_INFO "Sincos z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
+//            tZ1_lhs *= (int32_t) gauss_stddev;
+//            tZ2_lhs *= (int32_t) gauss_stddev;
+//            printk(KERN_INFO "* stddev z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
+//            if( (tZ1_lhs >= 0 && tZ1_lhs < 500000)) {
+//                tZ1_lhs-= 40000;
+//            } else if ((tZ1_lhs < 0 &&  tZ1_lhs > -500000)) {
+//                tZ1_lhs+= (int) (int_sqrt(gauss_stddev)) * 40000;
+//            }
+//
+//            if( (tZ2_lhs >= 0 && tZ2_lhs < 500000)) {
+//                tZ2_lhs-= 40000;
+//            } else if ((tZ2_lhs < 0 &&  tZ2_lhs > -500000)) {
+//                tZ2_lhs+= 40000;
+//            }
+//            tZ1_lhs += (tZ1_lhs >= 0) ? 500000 : -500000;
+//            tZ2_lhs += (tZ1_lhs >= 0) ? 500000 : -500000;
+//            printk(KERN_INFO "Adjusted 500k z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
+//            tZ1_lhs /= 1000000;
+//            tZ2_lhs /= 1000000;
+//            printk(KERN_INFO "Res Z1: %d Res Z2: %d\n", tZ1_lhs, tZ2_lhs);
+//            tZ1_lhs += (int32_t) gauss_mean;
+//            tZ2_lhs += (int32_t) gauss_mean;
+//            printk(KERN_INFO "After mean z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
+//        }
         helper_ptr[i] = Z1_lhs;
         helper_ptr[i+1] = Z2_lhs;
     }
+    printk(KERN_INFO "Count of zeroes: %u\n", count_of_zeroes);
 }
 
 static void seed_MYDEV(void) {
-    /* Incredible seed generator */
+    /* Incredible initial seed generator */
     uint32_t i;
     for (i = 0; i < STATE_BUF_LEN; ++i)
         STATE_BUF[i] = ktime_get_ns();
 }
 
 static void fill_rng_buffer_MYDEV(uint32_t ** buf_ptr, size_t length) {
-    printk(KERN_INFO "Entering fill!\n");
     size_t div = (size_t) length / sizeof(uint32_t);
     size_t rest = length % sizeof(uint32_t);
-    uint32_t** ptr = (uint32_t**) buf_ptr;
-    uint32_t* helper_ptr = *ptr;
-    size_t i = 0;
+    uint32_t* helper_ptr = *buf_ptr;
+    size_t i;
     for(i=0; i < div; ++i) {
         helper_ptr[i] = xoshiro128ss(STATE_BUF);
     }
     if(rest != 0) {
         uint32_t rn = xoshiro128ss(STATE_BUF);
-        memcpy(&rn, helper_ptr+div, rest);
+        memcpy(helper_ptr+div, &rn, rest);
     }
     printk(KERN_INFO "Filled!\n");
 }
@@ -961,9 +214,6 @@ int init_MYDEV(void)
 
 void cleanup_MYDEV(void)
 {
-    if(prng_ptr != NULL) {
-        kfree(prng_ptr);
-    }
     cdev_del(&c_dev);
     device_destroy(class_ptr, dev);
     class_destroy(class_ptr);
@@ -991,55 +241,103 @@ static int release_MYDEV(struct inode *inode, struct file *file)
     return RET_OK;
 }
 
+static ssize_t generate_universal(char* buffer, size_t length) {
+    uint32_t * prng_ptr = kmalloc(length, GFP_KERNEL);
+    if(prng_ptr == NULL) {
+        kfree(prng_ptr);
+        return -EFAULT;
+    }
+    fill_rng_buffer_MYDEV(&prng_ptr, length);
+    if(copy_to_user(buffer, prng_ptr, length) != 0) {
+        kfree(prng_ptr);
+        return -EFAULT;
+    }
+    return (ssize_t) length;
+}
+
+static ssize_t generate_gauss(char* buffer, size_t length) {
+    uint8_t* universal_ptr = kmalloc(length / sizeof(uint32_t), GFP_KERNEL);
+    int32_t* gaussian_ptr = kmalloc(length, GFP_KERNEL);
+    fill_rng_buffer_MYDEV((uint32_t**)&universal_ptr, length/sizeof(uint32_t));
+    get_gaussian(universal_ptr, &gaussian_ptr, length);
+    if(copy_to_user(buffer, gaussian_ptr, length) != 0) {
+        kfree(gaussian_ptr);
+        kfree(universal_ptr);
+        return -EFAULT;
+    }
+    kfree(universal_ptr);
+    kfree(gaussian_ptr);
+    return (ssize_t) length;
+}
+
 static ssize_t read_MYDEV(struct file *filp, char *buffer, size_t length, loff_t * offset)
 {
-    ssize_t bytes_read = (ssize_t) length;
     if(length == 0) {
         return 0;
     }
 
-     //Universal distribution case
-
-//    prng_ptr = krealloc(prng_ptr, length, GFP_KERNEL);
-//    if(prng_ptr == NULL) {
-//        return -EFAULT;
-//    }
-//    fill_rng_buffer_MYDEV(&prng_ptr, length);
-//    if(copy_to_user(buffer, prng_ptr, length) != 0) {
-//        printk(KERN_INFO "copy_to_user couldn't copy all requested bytes\n");
-//        return -EFAULT;
-//    }
-//    printk(KERN_INFO "Returning!\n");
-//    return bytes_read;
-
-   //  -------
-
-    printk(KERN_INFO "Requesting %zu / %lu =  %lu universal bytes\n",length, sizeof(uint32_t), length / sizeof(uint32_t));
-    // For length==16, which would be 4 int32_t, allocating 4 universal bytes
-    uint8_t* universal_ptr = krealloc(universal_ptr, length / sizeof(uint32_t), GFP_KERNEL);
-    printk(KERN_INFO "Requesting %lu gaussian bytes\n", length);
-    // For length==16, which is 4 int32_t, allocating 16 bytes
-    int32_t* gaussian_ptr = krealloc(gaussian_ptr, length, GFP_KERNEL);
-    fill_rng_buffer_MYDEV((uint32_t**)&universal_ptr, length);
-    get_gaussian(universal_ptr, &gaussian_ptr, length);
-    printk(KERN_INFO "Results %d %d\n", gaussian_ptr[0], gaussian_ptr[1]);
-    //int32_t tst[8] = {1,2,3,4,5,6,7,8};
-    if(copy_to_user(buffer, gaussian_ptr, length) != 0) {
-        printk(KERN_INFO "copy_to_user couldn't copy all requested bytes\n");
-        return -EFAULT;
+    switch(generator_mode) {
+        case(MODE_UNIVERSAL):
+            return generate_universal(buffer, length);
+        case(MODE_GAUSS):
+            return generate_gauss(buffer, length);
+        default:
+            return -EFAULT;
     }
-    printk(KERN_INFO "Returning!\n");
 
-    return bytes_read;
 }
 
 static ssize_t
 write_MYDEV(struct file *filp, const char *buff, size_t len, loff_t * off)
 {
-    size_t bytes_written = (len < STATE_BUF_LEN * sizeof(uint64_t) ) ? len : STATE_BUF_LEN * sizeof(uint64_t);
-    if(copy_from_user(STATE_BUF, buff, bytes_written) != bytes_written)
+    char * read_data = kmalloc(len, GFP_KERNEL);
+    if(copy_from_user(read_data, buff, len))
         return -EFAULT;
-    return (ssize_t) bytes_written;
+    if(strncmp("seed:", read_data, 5) == 0) {
+        size_t seed_len = (len < STATE_BUF_LEN  * sizeof(uint32_t) + 5 ) ? len - 5: STATE_BUF_LEN * sizeof(uint32_t);
+        memcpy(STATE_BUF, read_data+5, seed_len);
+    } else if(strncmp("gauss:", read_data, 6) == 0) {
+        size_t i = 6;
+        size_t j;
+        char * dev_data;
+        char * mean_data;
+        generator_mode = MODE_GAUSS;
+        while(read_data[i] == ' ') i++;
+        j = i;
+        while(read_data[j] != ' ') j++;
+        dev_data = kmalloc(j - i + 1, GFP_KERNEL);
+        memcpy(dev_data, read_data + i, j - i);
+        dev_data[j-i] = '\0';
+        if(kstrtol(dev_data, 0, &gauss_stddev) != 0 ) {
+            kfree(read_data);
+            kfree(dev_data);
+            return -EFAULT;
+        }
+
+        i = j + 1;
+        while(read_data[i] == ' ') i++;
+        j = i;
+        while(read_data[j] != ' ' && read_data[j] != '\0' && read_data[j] != '\n') j++;
+        mean_data = kmalloc(j - i + 1, GFP_KERNEL);
+        mean_data[j-i] = '\0';
+        memcpy(mean_data, read_data + i, j - i);
+        if(kstrtol(mean_data, 0, &gauss_mean) != 0 ) {
+            kfree(read_data);
+            kfree(dev_data);
+            kfree(mean_data);
+            return -EFAULT;
+        }
+
+        kfree(dev_data);
+        kfree(mean_data);
+
+    } else if(strncmp("universal", read_data, 9) == 0) {
+        generator_mode = MODE_UNIVERSAL;
+    } else {
+        printk(KERN_INFO "Unknown write\n");
+    }
+    kfree(read_data);
+    return (ssize_t) len;
 }
 
 module_init(init_MYDEV)
