@@ -38,11 +38,16 @@ static uint32_t STATE_BUF[STATE_BUF_LEN];
 
 #define MODE_UNIVERSAL 0
 #define MODE_GAUSS 1
+#define MODE_BETA 2
 
 static int generator_mode = MODE_UNIVERSAL;
 
 static long gauss_stddev = 1;
 static long gauss_mean = 0;
+
+static long beta_alpha = 1;
+static long beta_beta = 1;
+#define URN_ITERATIONS 200
 
 /* For module_init */
 static dev_t dev;
@@ -88,75 +93,55 @@ uint64_t xoshiro128ss(uint32_t* state_ptr) {
 
 /* --       -- */
 
-static void get_gaussian(const uint8_t* uni_source, int32_t ** result, size_t length) {
-    int count_of_zeroes = 0;
+static void get_gaussian(const uint16_t* uni_source, int32_t ** result, size_t length) {
+    int64_t adjustment = 500000000000 + 2360000000 * gauss_stddev + 12000000 * gauss_stddev * gauss_stddev;
     int32_t * helper_ptr = *result;
     size_t i = 0;
     size_t to = length / (sizeof(uint32_t));
     for(; i < to; i+=2) {
-        uint8_t U1 = uni_source[i] % 256;
-        uint8_t U2 = uni_source[i+1] % 256;
-        int32_t Z1_lhs = gaussian_lookup_table_sqrt[U1];
-        int32_t Z2_lhs = gaussian_lookup_table_sqrt[U1];
+        uint16_t U1 = uni_source[i] % 512;
+        uint16_t U2 = uni_source[i+1] % 512;
+        int64_t Z1_lhs = gaussian_lookup_table_sqrt[U1];
+        int64_t Z2_lhs = gaussian_lookup_table_sqrt[U1];
         Z1_lhs *= gaussian_lookup_table_sin[(U2)];
-        Z2_lhs *= gaussian_lookup_table_cos[(U2)]; // 400 000
-        Z1_lhs *= (int32_t) gauss_stddev;
-        Z2_lhs *= (int32_t) gauss_stddev;
-//        if( (Z1_lhs >= 0 && Z1_lhs < 500000)) {
-//            Z1_lhs-= 40000;
-//        } else if ((Z1_lhs < 0 &&  Z1_lhs > -500000)) {
-//            Z1_lhs+= (int) (int_sqrt(gauss_stddev)) * 40000;
-//        }
-//
-//        if( (Z2_lhs >= 0 && Z2_lhs < 500000)) {
-//            Z2_lhs-= 40000;
-//        } else if ((Z2_lhs < 0 &&  Z2_lhs > -500000)) {
-//            Z2_lhs+= 40000;
-//        }
-        Z1_lhs += (Z1_lhs >= 0) ? 500000 : -500000;
-        Z2_lhs += (Z2_lhs >= 0) ? 500000 : -500000;
-        Z1_lhs /= 1000000;
-        Z2_lhs /= 1000000;
+        Z2_lhs *= gaussian_lookup_table_cos[(U2)];
+        Z1_lhs *= (int64_t)gauss_stddev;
+        Z2_lhs *= (int64_t) gauss_stddev;
+        Z1_lhs += (Z1_lhs >= 0) ? adjustment : -adjustment;
+        Z2_lhs += (Z2_lhs >= 0) ? adjustment : -adjustment;
+        Z1_lhs /= 1000000000000;
+        Z2_lhs /= 1000000000000;
         Z1_lhs += (int32_t) gauss_mean;
         Z2_lhs += (int32_t) gauss_mean;
 
-//        if(Z1_lhs == 0 || Z2_lhs == 0) {
-//            printk(KERN_INFO "Retracing zero\n");
-//            printk(KERN_INFO "U1: %d, U2: %d\n", U1, U2);
-//            int32_t tZ1_lhs = gaussian_lookup_table_sqrt[U1];
-//            int32_t tZ2_lhs = gaussian_lookup_table_sqrt[U1];
-//            printk(KERN_INFO "Sqrt z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
-//            tZ1_lhs *= gaussian_lookup_table_sin[(U2)];
-//            tZ2_lhs *= gaussian_lookup_table_cos[(U2)];
-//            printk(KERN_INFO "Sincos z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
-//            tZ1_lhs *= (int32_t) gauss_stddev;
-//            tZ2_lhs *= (int32_t) gauss_stddev;
-//            printk(KERN_INFO "* stddev z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
-//            if( (tZ1_lhs >= 0 && tZ1_lhs < 500000)) {
-//                tZ1_lhs-= 40000;
-//            } else if ((tZ1_lhs < 0 &&  tZ1_lhs > -500000)) {
-//                tZ1_lhs+= (int) (int_sqrt(gauss_stddev)) * 40000;
-//            }
-//
-//            if( (tZ2_lhs >= 0 && tZ2_lhs < 500000)) {
-//                tZ2_lhs-= 40000;
-//            } else if ((tZ2_lhs < 0 &&  tZ2_lhs > -500000)) {
-//                tZ2_lhs+= 40000;
-//            }
-//            tZ1_lhs += (tZ1_lhs >= 0) ? 500000 : -500000;
-//            tZ2_lhs += (tZ1_lhs >= 0) ? 500000 : -500000;
-//            printk(KERN_INFO "Adjusted 500k z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
-//            tZ1_lhs /= 1000000;
-//            tZ2_lhs /= 1000000;
-//            printk(KERN_INFO "Res Z1: %d Res Z2: %d\n", tZ1_lhs, tZ2_lhs);
-//            tZ1_lhs += (int32_t) gauss_mean;
-//            tZ2_lhs += (int32_t) gauss_mean;
-//            printk(KERN_INFO "After mean z1: %d z2: %d\n", tZ1_lhs, tZ2_lhs);
-//        }
-        helper_ptr[i] = Z1_lhs;
-        helper_ptr[i+1] = Z2_lhs;
+        helper_ptr[i] = (int32_t)Z1_lhs;
+        helper_ptr[i+1] = (int32_t)Z2_lhs;
     }
-    printk(KERN_INFO "Count of zeroes: %u\n", count_of_zeroes);
+}
+
+static void get_beta(uint32_t ** result, size_t length) {
+    uint32_t * helper_ptr = *result;
+    size_t i = 0;
+    for(; i < length/sizeof(uint32_t); ++i) {
+        uint32_t alpha_count = beta_alpha;
+        uint32_t beta_count = beta_beta;
+        uint32_t sum = alpha_count + beta_count;
+        uint32_t drawn = 0;
+        size_t j = 0;
+        for(; j < URN_ITERATIONS; ++j) {
+            uint32_t universal_result = xoshiro128ss(STATE_BUF) % sum;
+            if(universal_result < alpha_count) {
+                alpha_count++;
+                sum++;
+            } else {
+                beta_count++;
+                sum++;
+                drawn++;
+            }
+
+        }
+        helper_ptr[i] = drawn;
+    }
 }
 
 static void seed_MYDEV(void) {
@@ -256,9 +241,9 @@ static ssize_t generate_universal(char* buffer, size_t length) {
 }
 
 static ssize_t generate_gauss(char* buffer, size_t length) {
-    uint8_t* universal_ptr = kmalloc(length / sizeof(uint32_t), GFP_KERNEL);
+    uint16_t* universal_ptr = kmalloc(2*(length / sizeof(uint32_t)), GFP_KERNEL);
     int32_t* gaussian_ptr = kmalloc(length, GFP_KERNEL);
-    fill_rng_buffer_MYDEV((uint32_t**)&universal_ptr, length/sizeof(uint32_t));
+    fill_rng_buffer_MYDEV((uint32_t**)&universal_ptr, 2*(length/sizeof(uint32_t)));
     get_gaussian(universal_ptr, &gaussian_ptr, length);
     if(copy_to_user(buffer, gaussian_ptr, length) != 0) {
         kfree(gaussian_ptr);
@@ -267,6 +252,18 @@ static ssize_t generate_gauss(char* buffer, size_t length) {
     }
     kfree(universal_ptr);
     kfree(gaussian_ptr);
+    return (ssize_t) length;
+}
+
+static ssize_t generate_beta(char* buffer, size_t length) {
+    uint32_t* beta_ptr = kmalloc(length, GFP_KERNEL);
+    printk(KERN_INFO "Allocated beta_ptr\n");
+    get_beta(&beta_ptr, length);
+    if(copy_to_user(buffer, beta_ptr, length) != 0) {
+        kfree(beta_ptr);
+        return -EFAULT;
+    }
+    kfree(beta_ptr);
     return (ssize_t) length;
 }
 
@@ -281,6 +278,8 @@ static ssize_t read_MYDEV(struct file *filp, char *buffer, size_t length, loff_t
             return generate_universal(buffer, length);
         case(MODE_GAUSS):
             return generate_gauss(buffer, length);
+        case(MODE_BETA):
+            return generate_beta(buffer, length);
         default:
             return -EFAULT;
     }
@@ -331,6 +330,43 @@ write_MYDEV(struct file *filp, const char *buff, size_t len, loff_t * off)
         kfree(dev_data);
         kfree(mean_data);
 
+    } else if(strncmp("beta:", read_data, 5) == 0) {
+        size_t i = 5;
+        size_t j;
+        char * alpha_data;
+        char * beta_data;
+        generator_mode = MODE_BETA;
+        while(read_data[i] == ' ') i++;
+        j = i;
+        while(read_data[j] != ' ') j++;
+        alpha_data = kmalloc(j - i + 1, GFP_KERNEL);
+        memcpy(alpha_data, read_data + i, j - i);
+        alpha_data[j-i] = '\0';
+        if(kstrtol(alpha_data, 0, &beta_alpha) != 0 ) {
+            kfree(read_data);
+            kfree(alpha_data);
+            return -EFAULT;
+        }
+        printk(KERN_INFO "beta alpha: %ld", beta_alpha);
+
+        i = j + 1;
+        while(read_data[i] == ' ') i++;
+        j = i;
+        while(read_data[j] != ' ' && read_data[j] != '\0' && read_data[j] != '\n') j++;
+        beta_data = kmalloc(j - i + 1, GFP_KERNEL);
+        beta_data[j-i] = '\0';
+        memcpy(beta_data, read_data + i, j - i);
+        if(kstrtol(beta_data, 0, &beta_beta) != 0 ) {
+            kfree(read_data);
+            kfree(alpha_data);
+            kfree(beta_data);
+            return -EFAULT;
+        }
+
+        printk(KERN_INFO "beta beta: %ld", beta_beta);
+
+        kfree(alpha_data);
+        kfree(beta_data);
     } else if(strncmp("universal", read_data, 9) == 0) {
         generator_mode = MODE_UNIVERSAL;
     } else {
